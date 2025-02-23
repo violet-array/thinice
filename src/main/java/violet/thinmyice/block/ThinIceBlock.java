@@ -186,13 +186,13 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
     }
 
 
-    @Override
-    protected boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
-        int i = state.getValue(LAYERS);
-        if (!useContext.getItemInHand().is(this.asItem()) || i >= 8) {
-            return i == 1;
-        } else {
-            return !useContext.replacingClickedOnBlock() || useContext.getClickedFace() == Direction.UP;
-        }
-    }
+//    @Override
+//    protected boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
+//        int i = state.getValue(LAYERS);
+//        if (!useContext.getItemInHand().is(this.asItem()) || i >= 8) {
+//            return i == 1;
+//        } else {
+//            return !useContext.replacingClickedOnBlock() || useContext.getClickedFace() == Direction.UP;
+//        }
+//    }
 }
