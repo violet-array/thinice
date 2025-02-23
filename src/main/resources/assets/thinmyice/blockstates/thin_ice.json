@@ -22,6 +22,7 @@
       "model": "thinmyice:block/ice_height14"
     },
     "layers=8": {
+      "render_type": "minecraft:translucent",
       "model": "minecraft:block/ice"
     }
   }
