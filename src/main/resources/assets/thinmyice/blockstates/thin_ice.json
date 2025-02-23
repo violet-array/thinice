@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "layers=1": {
+      "model": "thinmyice:block/ice_height2"
+    },
+    "layers=2": {
+      "model": "thinmyice:block/ice_height4"
+    },
+    "layers=3": {
+      "model": "thinmyice:block/ice_height6"
+    },
+    "layers=4": {
+      "model": "thinmyice:block/ice_height8"
+    },
+    "layers=5": {
+      "model": "thinmyice:block/ice_height10"
+    },
+    "layers=6": {
+      "model": "thinmyice:block/ice_height12"
+    },
+    "layers=7": {
+      "model": "thinmyice:block/ice_height14"
+    },
+    "layers=8": {
+      "model": "minecraft:block/ice"
+    }
+  }
+}
