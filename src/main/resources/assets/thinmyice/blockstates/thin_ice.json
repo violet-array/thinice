@@ -1,25 +1,46 @@
 {
   "variants": {
-    "layers=1": {
+    "bottom=false,layers=1": {
       "model": "thinmyice:block/ice_height2"
     },
-    "layers=2": {
+    "bottom=false,layers=2": {
       "model": "thinmyice:block/ice_height4"
     },
-    "layers=3": {
+    "bottom=false,layers=3": {
       "model": "thinmyice:block/ice_height6"
     },
-    "layers=4": {
+    "bottom=false,layers=4": {
       "model": "thinmyice:block/ice_height8"
     },
-    "layers=5": {
+    "bottom=false,layers=5": {
       "model": "thinmyice:block/ice_height10"
     },
-    "layers=6": {
+    "bottom=false,layers=6": {
       "model": "thinmyice:block/ice_height12"
     },
-    "layers=7": {
+    "bottom=false,layers=7": {
       "model": "thinmyice:block/ice_height14"
+    },
+    "bottom=true,layers=1": {
+      "model": "thinmyice:block/ice_bottom_height2"
+    },
+    "bottom=true,layers=2": {
+      "model": "thinmyice:block/ice_bottom_height4"
+    },
+    "bottom=true,layers=3": {
+      "model": "thinmyice:block/ice_bottom_height6"
+    },
+    "bottom=true,layers=4": {
+      "model": "thinmyice:block/ice_bottom_height8"
+    },
+    "bottom=true,layers=5": {
+      "model": "thinmyice:block/ice_bottom_height10"
+    },
+    "bottom=true,layers=6": {
+      "model": "thinmyice:block/ice_bottom_height12"
+    },
+    "bottom=true,layers=7": {
+      "model": "thinmyice:block/ice_bottom_height14"
     },
     "layers=8": {
       "render_type": "minecraft:translucent",

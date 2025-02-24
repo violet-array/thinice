@@ -39,9 +39,11 @@ import violet.thinmyice.ThinMyIce;
 public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
     public static final MapCodec<ThinIceBlock> CODEC = simpleCodec(ThinIceBlock::new);
     public static final int MAX_HEIGHT = 8;
+
+    public static final BooleanProperty BOTTOM = BlockStateProperties.BOTTOM;
     public static final IntegerProperty LAYERS = BlockStateProperties.LAYERS;
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
-    protected static final VoxelShape[] SHAPE_BY_LAYER = new VoxelShape[]{
+    protected static final VoxelShape[] TOP_SHAPE_BY_LAYER = new VoxelShape[]{
             Shapes.empty(),
             Block.box(0.0, 14.0, 0.0, 16.0, 16.0, 16.0),
             Block.box(0.0, 12.0, 0.0, 16.0, 16.0, 16.0),
@@ -53,9 +55,22 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
             Block.box(0.0, 0.0, 0.0, 16.0, 16.0, 16.0)
     };
 
+    protected static final VoxelShape[] BOTTOM_SHAPE_BY_LAYER = new VoxelShape[]{
+            Shapes.empty(),
+            Block.box(0.0, 0.0, 0.0, 16.0, 2.0, 16.0),
+            Block.box(0.0, 0.0, 0.0, 16.0, 4.0, 16.0),
+            Block.box(0.0, 0.0, 0.0, 16.0, 6.0, 16.0),
+            Block.box(0.0, 0.0, 0.0, 16.0, 8.0, 16.0),
+            Block.box(0.0, 0.0, 0.0, 16.0, 10.0, 16.0),
+            Block.box(0.0, 0.0, 0.0, 16.0, 12.0, 16.0),
+            Block.box(0.0, 0.0, 0.0, 16.0, 14.0, 16.0),
+            Block.box(0.0, 0.0, 0.0, 16.0, 16.0, 16.0)
+    };
+
+
     public ThinIceBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.getStateDefinition().any().setValue(LAYERS, 1).setValue(WATERLOGGED, false));
+        this.registerDefaultState(this.getStateDefinition().any().setValue(LAYERS, 1).setValue(WATERLOGGED, false).setValue(BOTTOM, false));
     }
 
 //    @Override
@@ -87,22 +102,22 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
 
     @Override
     protected @NotNull VoxelShape getShape(BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos, @NotNull CollisionContext context) {
-        return SHAPE_BY_LAYER[state.getValue(LAYERS)];
+        return state.getValue(BOTTOM) ? BOTTOM_SHAPE_BY_LAYER[state.getValue(LAYERS)] : TOP_SHAPE_BY_LAYER[state.getValue(LAYERS)];
     }
 
     @Override
     protected @NotNull VoxelShape getCollisionShape(BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos, @NotNull CollisionContext context) {
-        return SHAPE_BY_LAYER[state.getValue(LAYERS)];
+        return state.getValue(BOTTOM) ? BOTTOM_SHAPE_BY_LAYER[state.getValue(LAYERS)] : TOP_SHAPE_BY_LAYER[state.getValue(LAYERS)];
     }
 
     @Override
     protected VoxelShape getBlockSupportShape(BlockState state, BlockGetter reader, BlockPos pos) {
-        return SHAPE_BY_LAYER[state.getValue(LAYERS)];
+        return state.getValue(BOTTOM) ? BOTTOM_SHAPE_BY_LAYER[state.getValue(LAYERS)] : TOP_SHAPE_BY_LAYER[state.getValue(LAYERS)];
     }
 
     @Override
     protected VoxelShape getVisualShape(BlockState state, BlockGetter reader, BlockPos pos, CollisionContext context) {
-        return SHAPE_BY_LAYER[state.getValue(LAYERS)];
+        return state.getValue(BOTTOM) ? BOTTOM_SHAPE_BY_LAYER[state.getValue(LAYERS)] : TOP_SHAPE_BY_LAYER[state.getValue(LAYERS)];
     }
 
     @Override
@@ -150,7 +165,7 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(LAYERS, WATERLOGGED);
+        builder.add(BOTTOM, LAYERS, WATERLOGGED);
 
     }
 
@@ -176,6 +191,10 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
         if(adjacentBlockState.is(this) && side != Direction.DOWN) {
 
             return state.getValue(LAYERS).equals(adjacentBlockState.getValue(LAYERS));
+        }
+        else if(adjacentBlockState.is(Blocks.ICE) && side != Direction.DOWN) {
+
+            return true;
         }
         else {
             return super.skipRendering(state, adjacentBlockState, side);
