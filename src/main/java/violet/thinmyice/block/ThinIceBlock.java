@@ -1,5 +1,6 @@
 package violet.thinmyice.block;
 
+import com.ibm.icu.text.RelativeDateTimeFormatter;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -39,7 +40,6 @@ import violet.thinmyice.ThinMyIce;
 public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
     public static final MapCodec<ThinIceBlock> CODEC = simpleCodec(ThinIceBlock::new);
     public static final int MAX_HEIGHT = 8;
-
     public static final BooleanProperty BOTTOM = BlockStateProperties.BOTTOM;
     public static final IntegerProperty LAYERS = BlockStateProperties.LAYERS;
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
@@ -80,8 +80,6 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
 //        }
 //        return false;
 //    }
-
-
     // Waterlogging
     @Override
     protected FluidState getFluidState(BlockState state) {
@@ -147,7 +145,7 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
         if (blockstate.is(this)) {
             int i = blockstate.getValue(LAYERS);
             if (i >= MAX_HEIGHT-1) {
-                return blockstate.setValue(LAYERS, Math.min(MAX_HEIGHT, i + 1)).setValue(WATERLOGGED, false);
+                return blockstate.setValue(LAYERS, Math.min(MAX_HEIGHT, i + 1)).setValue(WATERLOGGED, false).setValue(BOTTOM, false);
             }
             else {
                 return blockstate.setValue(LAYERS, Math.min(MAX_HEIGHT, i + 1));
@@ -155,11 +153,14 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
         } else {
             //Waterlogging logic
             FluidState fluidState = context.getLevel().getFluidState(blockpos);
-            BlockState defaultBlockState = this.defaultBlockState();
-            if (fluidState.getType() == Fluids.WATER)
-                return defaultBlockState.setValue(WATERLOGGED, true);
+            BlockState defaultBlockState = this.defaultBlockState()
+                    .setValue(BOTTOM, false)
+                    .setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER);
 
-            return super.getStateForPlacement(context);
+            Direction direction = context.getClickedFace();
+            return direction != Direction.DOWN && (direction == Direction.UP || !(context.getClickLocation().y - (double)blockpos.getY() > 0.5))
+                    ? defaultBlockState.setValue(BOTTOM, true)
+                    : defaultBlockState;
         }
     }
 
@@ -185,16 +186,41 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
     @Override
     protected boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
 
+        //TODO: Bottom Thin Ice Blocks below Ice Blocks are rendering a top face
+
+        int layers = state.getValue(LAYERS);
+        boolean isBottom = state.getValue(BOTTOM);
 
 
-        //TODO: this could cull a lot more faces with lots of logic
-        if(adjacentBlockState.is(this) && side != Direction.DOWN) {
+        if(adjacentBlockState.is(this)) {
 
-            return state.getValue(LAYERS).equals(adjacentBlockState.getValue(LAYERS));
+            int adjacentLayers = adjacentBlockState.getValue(LAYERS);
+            boolean adjacentIsBottom = adjacentBlockState.getValue(BOTTOM);
+
+            if (side == Direction.UP) {
+
+                return (layers == MAX_HEIGHT && adjacentIsBottom) || (!isBottom && adjacentIsBottom) || (layers == MAX_HEIGHT && adjacentLayers == MAX_HEIGHT);
+            }
+            else if (side == Direction.DOWN) {
+
+                return (layers == MAX_HEIGHT && !adjacentIsBottom) || (isBottom && !adjacentIsBottom) || (layers == MAX_HEIGHT && adjacentLayers == MAX_HEIGHT);
+            }
+            else {
+                if (layers <= adjacentLayers) {
+                    return adjacentLayers == MAX_HEIGHT || isBottom == adjacentIsBottom;
+                }
+                else return false;
+            }
+
+
+
         }
-        else if(adjacentBlockState.is(Blocks.ICE) && side != Direction.DOWN) {
+        else if(adjacentBlockState.is(Blocks.ICE)) {
+            if (side == Direction.UP && !isBottom) {
+                return true;
+            }
+            else return side == Direction.DOWN && isBottom;
 
-            return true;
         }
         else {
             return super.skipRendering(state, adjacentBlockState, side);
@@ -205,13 +231,17 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
     }
 
 
-//    @Override
-//    protected boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
-//        int i = state.getValue(LAYERS);
-//        if (!useContext.getItemInHand().is(this.asItem()) || i >= 8) {
-//            return i == 1;
-//        } else {
-//            return !useContext.replacingClickedOnBlock() || useContext.getClickedFace() == Direction.UP;
-//        }
-//    }
+    @Override
+    protected boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
+        if (!useContext.getItemInHand().is(this.asItem())) {
+            return false;
+        } else {
+            if (state.getValue(BOTTOM)) {
+                return !useContext.replacingClickedOnBlock() || useContext.getClickedFace() == Direction.UP;
+            }
+            else {
+                return useContext.getClickedFace() == Direction.DOWN;
+            }
+        }
+    }
 }
