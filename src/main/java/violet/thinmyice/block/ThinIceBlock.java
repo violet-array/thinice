@@ -37,7 +37,7 @@ import net.minecraft.core.Direction;
 import violet.thinmyice.ThinMyIce;
 
 
-public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
+public class ThinIceBlock extends IceBlock implements SimpleWaterloggedBlock {
     public static final MapCodec<ThinIceBlock> CODEC = simpleCodec(ThinIceBlock::new);
     public static final int MAX_HEIGHT = 8;
     public static final BooleanProperty BOTTOM = BlockStateProperties.BOTTOM;
@@ -73,6 +73,12 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
         this.registerDefaultState(this.getStateDefinition().any().setValue(LAYERS, 1).setValue(WATERLOGGED, false).setValue(BOTTOM, false));
     }
 
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(BOTTOM, LAYERS, WATERLOGGED);
+
+    }
+
 //    @Override
 //    protected boolean isPathfindable(@NotNull BlockState state, @NotNull PathComputationType pathComputationType) {
 //        if (Objects.requireNonNull(pathComputationType) == PathComputationType.LAND) {
@@ -80,7 +86,101 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
 //        }
 //        return false;
 //    }
-    // Waterlogging
+
+    @Nullable
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        BlockPos blockpos = context.getClickedPos();
+        BlockState blockstate = context.getLevel().getBlockState(blockpos);
+        if (blockstate.is(this)) {
+            int i = blockstate.getValue(LAYERS);
+            if (i >= MAX_HEIGHT-1) {
+                return blockstate.setValue(LAYERS, Math.min(MAX_HEIGHT, i + 1)).setValue(WATERLOGGED, false).setValue(BOTTOM, false);
+            }
+            else {
+                return blockstate.setValue(LAYERS, Math.min(MAX_HEIGHT, i + 1));
+            }
+        } else {
+            //Waterlogging logic
+            FluidState fluidState = context.getLevel().getFluidState(blockpos);
+            BlockState defaultBlockState = this.defaultBlockState()
+                    .setValue(BOTTOM, false)
+                    .setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER);
+
+            Direction direction = context.getClickedFace();
+            return direction != Direction.DOWN && (direction == Direction.UP || !(context.getClickLocation().y - (double)blockpos.getY() > 0.5))
+                    ? defaultBlockState.setValue(BOTTOM, true)
+                    : defaultBlockState;
+        }
+    }
+
+    @Override
+    protected boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
+        if (!useContext.getItemInHand().is(this.asItem())) {
+            return false;
+        } else {
+            if (state.getValue(BOTTOM)) {
+                return !useContext.replacingClickedOnBlock() || useContext.getClickedFace() == Direction.UP;
+            }
+            else {
+                return state.getValue(LAYERS) != MAX_HEIGHT && useContext.getClickedFace() == Direction.DOWN;
+            }
+        }
+    }
+
+    @Override
+    protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        if (level.getBrightness(LightLayer.BLOCK, pos) > 11) {
+            dropResources(state, level, pos);
+            level.removeBlock(pos, false);
+        }
+    }
+
+    @Override
+    protected boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
+
+        //TODO: Bottom Thin Ice Blocks below Ice Blocks are rendering a top face
+        // Thin Ice Blocks below Full Thin Ice Blocks also render it
+
+        int layers = state.getValue(LAYERS);
+        boolean isBottom = state.getValue(BOTTOM);
+
+        if(adjacentBlockState.is(this)) {
+
+            int adjacentLayers = adjacentBlockState.getValue(LAYERS);
+            boolean adjacentIsBottom = adjacentBlockState.getValue(BOTTOM);
+
+            if (side == Direction.UP) {
+
+                return (layers == MAX_HEIGHT && adjacentIsBottom) || (!isBottom && adjacentIsBottom) || (layers == MAX_HEIGHT && adjacentLayers == MAX_HEIGHT);
+            }
+            else if (side == Direction.DOWN) {
+
+                return (layers == MAX_HEIGHT && !adjacentIsBottom) || (isBottom && !adjacentIsBottom) || (layers == MAX_HEIGHT && adjacentLayers == MAX_HEIGHT);
+            }
+            else {
+                if (layers <= adjacentLayers) {
+                    return adjacentLayers == MAX_HEIGHT || isBottom == adjacentIsBottom;
+                }
+                else return false;
+            }
+        }
+        else if(adjacentBlockState.is(Blocks.ICE)) {
+            if (side == Direction.UP && !isBottom) {
+                return true;
+            }
+            else return side == Direction.DOWN && isBottom;
+        }
+        else {
+            return super.skipRendering(state, adjacentBlockState, side);
+        }
+    }
+
+
+
+
+
+    /* SHAPE AND WATER */
     @Override
     protected FluidState getFluidState(BlockState state) {
         return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
@@ -95,8 +195,6 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
                 ? SimpleWaterloggedBlock.super.canPlaceLiquid(player, level, pos, state, fluid)
                 : false;
     }
-
-
 
     @Override
     protected @NotNull VoxelShape getShape(BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos, @NotNull CollisionContext context) {
@@ -137,111 +235,4 @@ public class ThinIceBlock extends Block implements SimpleWaterloggedBlock {
         return state.getValue(LAYERS) == 8 ? 0.2F : 1.0F;
     }
 
-    @Nullable
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockPos blockpos = context.getClickedPos();
-        BlockState blockstate = context.getLevel().getBlockState(blockpos);
-        if (blockstate.is(this)) {
-            int i = blockstate.getValue(LAYERS);
-            if (i >= MAX_HEIGHT-1) {
-                return blockstate.setValue(LAYERS, Math.min(MAX_HEIGHT, i + 1)).setValue(WATERLOGGED, false).setValue(BOTTOM, false);
-            }
-            else {
-                return blockstate.setValue(LAYERS, Math.min(MAX_HEIGHT, i + 1));
-            }
-        } else {
-            //Waterlogging logic
-            FluidState fluidState = context.getLevel().getFluidState(blockpos);
-            BlockState defaultBlockState = this.defaultBlockState()
-                    .setValue(BOTTOM, false)
-                    .setValue(WATERLOGGED, fluidState.getType() == Fluids.WATER);
-
-            Direction direction = context.getClickedFace();
-            return direction != Direction.DOWN && (direction == Direction.UP || !(context.getClickLocation().y - (double)blockpos.getY() > 0.5))
-                    ? defaultBlockState.setValue(BOTTOM, true)
-                    : defaultBlockState;
-        }
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BOTTOM, LAYERS, WATERLOGGED);
-
-    }
-
-
-
-    @Override
-    protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        if (level.getBrightness(LightLayer.BLOCK, pos) > 11) {
-            dropResources(state, level, pos);
-            level.removeBlock(pos, false);
-        }
-    }
-
-
-
-
-    @Override
-    protected boolean skipRendering(BlockState state, BlockState adjacentBlockState, Direction side) {
-
-        //TODO: Bottom Thin Ice Blocks below Ice Blocks are rendering a top face
-
-        int layers = state.getValue(LAYERS);
-        boolean isBottom = state.getValue(BOTTOM);
-
-
-        if(adjacentBlockState.is(this)) {
-
-            int adjacentLayers = adjacentBlockState.getValue(LAYERS);
-            boolean adjacentIsBottom = adjacentBlockState.getValue(BOTTOM);
-
-            if (side == Direction.UP) {
-
-                return (layers == MAX_HEIGHT && adjacentIsBottom) || (!isBottom && adjacentIsBottom) || (layers == MAX_HEIGHT && adjacentLayers == MAX_HEIGHT);
-            }
-            else if (side == Direction.DOWN) {
-
-                return (layers == MAX_HEIGHT && !adjacentIsBottom) || (isBottom && !adjacentIsBottom) || (layers == MAX_HEIGHT && adjacentLayers == MAX_HEIGHT);
-            }
-            else {
-                if (layers <= adjacentLayers) {
-                    return adjacentLayers == MAX_HEIGHT || isBottom == adjacentIsBottom;
-                }
-                else return false;
-            }
-
-
-
-        }
-        else if(adjacentBlockState.is(Blocks.ICE)) {
-            if (side == Direction.UP && !isBottom) {
-                return true;
-            }
-            else return side == Direction.DOWN && isBottom;
-
-        }
-        else {
-            return super.skipRendering(state, adjacentBlockState, side);
-        }
-
-
-//        return adjacentBlockState.is(this) ? true : super.skipRendering(state, adjacentBlockState, side);
-    }
-
-
-    @Override
-    protected boolean canBeReplaced(BlockState state, BlockPlaceContext useContext) {
-        if (!useContext.getItemInHand().is(this.asItem())) {
-            return false;
-        } else {
-            if (state.getValue(BOTTOM)) {
-                return !useContext.replacingClickedOnBlock() || useContext.getClickedFace() == Direction.UP;
-            }
-            else {
-                return useContext.getClickedFace() == Direction.DOWN;
-            }
-        }
-    }
 }

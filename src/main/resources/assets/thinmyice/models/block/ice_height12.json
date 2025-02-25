@@ -2,8 +2,8 @@
 	"credit": "Made with Blockbench",
 	"render_type": "minecraft:translucent",
 	"textures": {
-		"particle": "block/ice",
-		"texture": "block/ice"
+		"particle": "thinmyice:block/thin_ice",
+		"texture": "thinmyice:block/thin_ice"
 	},
 	"elements": [
 		{

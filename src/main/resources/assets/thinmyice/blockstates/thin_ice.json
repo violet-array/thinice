@@ -43,7 +43,7 @@
       "model": "thinmyice:block/ice_bottom_height14"
     },
     "layers=8": {
-      "model": "thinmyice:block/ice"
+      "model": "thinmyice:block/ice_thin"
     }
   }
 }
